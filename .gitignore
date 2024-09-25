@@ -1,0 +1,7 @@
+# ignore object files
+
+queue_send_task/Objects/
+queue_send_task/Listings/
+queue_send_task/queue_send.uvguix.HP
+
+

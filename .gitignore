@@ -1,4 +1,4 @@
-# ignore object files
+# ignore files that are generated everytimd project compiles
 
 queue_send_task/Objects/
 queue_send_task/Listings/

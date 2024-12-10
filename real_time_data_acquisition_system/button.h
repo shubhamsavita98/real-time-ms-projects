@@ -7,6 +7,4 @@ void config_button_pin(void);
 
 void config_EXTI(void);
 
-
-
 #endif

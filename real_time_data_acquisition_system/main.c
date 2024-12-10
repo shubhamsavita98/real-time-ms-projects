@@ -16,7 +16,7 @@
 
 // Constants
 #define QUEUE_LENGTH 1
-#define TEMP_BUFFER_LENGTH 10
+#define TEMP_BUFFER_LENGTH 25 
 #define QUEUE_ITEM_SIZE sizeof(uint32_t)
 
 // Global variables
@@ -39,9 +39,8 @@ void button_task(void *argument);
 //------------------------------------------------------------------------------
 TaskHandle_t SensorTaskHandle;
 TaskHandle_t ProcessingTaskHandle;
-//TaskHandle_t UartTaskHandle;
 TaskHandle_t ButtonTaskHandle;
-
+//TaskHandle_t UartTaskHandle;
 //------------------------------------------------------------------------------
 // Queue handles 
 //------------------------------------------------------------------------------
@@ -89,7 +88,7 @@ int main (void)
 		// Separate tasks for each processes
 		xTaskCreate(sensor_acquisition,"Sensor Acquisition Task", 100, NULL, 1, &SensorTaskHandle);
 		xTaskCreate(data_processing,"Data Processing Task", 100, NULL, 2, &ProcessingTaskHandle);
-		xTaskCreate(button_task,"Button Task", 100, NULL, 1, &ButtonTaskHandle);
+		xTaskCreate(button_task,"Button Task", 100, NULL, 3, &ButtonTaskHandle);
 		//xTaskCreate(uart_logging,"UART Logging Task", 100, NULL, 1, &UartTaskHandle);
 		ButtonSemaphore = xSemaphoreCreateBinary();
 
@@ -127,7 +126,7 @@ void sensor_acquisition(void *argument){
 		}
 		// Stop ADC conversion
 		ADC1->CR &= ~ADC_CR_ADSTART;
-		vTaskDelay(pdMS_TO_TICKS(1000)); // Wait before next read
+		vTaskDelay(pdMS_TO_TICKS(100)); // Wait before next read
   }
 }
 
@@ -147,7 +146,7 @@ void data_processing(void *argument){
 			voltage = (0.00081 * voltage_data_received);
 			temperature_C = (voltage - 0.5)*100;
 			//format the temperature and send over UART
-			sprintf(tempC_buffer, "%u\n\r", temperature_C);
+			sprintf(tempC_buffer, "Temperature: %u C\n\r", temperature_C);
 			send_string_via_usart(tempC_buffer);	
 		}
   }
@@ -161,12 +160,15 @@ void button_task(void *argument){
 	for(;;){
 		/* Wait for notification from ISR */
 		xSemaphoreTake(ButtonSemaphore, portMAX_DELAY);
-    send_string_via_usart("Button Pressed\n\r");			
+		led_on();
+    send_string_via_usart("Button Pressed\n\r");
+    led_off();		
 	}
 }
 
 
-void EXTI0_IRQHandler(void) {  
+void EXTI0_IRQHandler(void) {
+	led_on();
 	// PR (Pending Register): Check if the interrupt is triggered by EXTI13, as EXTI 10-15 share this interrupt vector.	
 	if ((EXTI->PR1 & EXTI_PR1_PIF0) == EXTI_PR1_PIF0) {
 		// cleared by writing a 1 to this bit
@@ -174,8 +176,8 @@ void EXTI0_IRQHandler(void) {
 		BaseType_t priorityStatus = pdFALSE; // by default false; low priority, no context switch
 		xSemaphoreGiveFromISR(ButtonSemaphore, &priorityStatus);
 		portYIELD_FROM_ISR(priorityStatus); // if high priority task then context switch; status becomes pdTRUE
-		led_on();
 	}
+	led_on();
 }
 
 /**
